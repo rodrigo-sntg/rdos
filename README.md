@@ -1,4 +1,4 @@
-# RDOS - Rodrigo Opertional System
+# RDOS - Rodrigo Operational System
 
 First try developing a operational system, using C and Assembly.
 
