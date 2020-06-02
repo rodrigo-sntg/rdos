@@ -1,4 +1,7 @@
 # RDOS - Rodrigo Opertional System
+[![CDNJS](https://img.shields.io/cdnjs/v/reactstrap.svg)](https://cdnjs.com/libraries/reactstrap)
+
+
 
 First try developing a operational system, using C and Assembly.
 
