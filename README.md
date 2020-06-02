@@ -1,5 +1,5 @@
 # RDOS - Rodrigo Opertional System
-[![CDNJS](https://img.shields.io/cdnjs/v/reactstrap.svg)](https://cdnjs.com/libraries/reactstrap)
+[![RDOS](https://img.shields.io/cdnjs/v/reactstrap.svg)](https://cdnjs.com/libraries/reactstrap)
 
 
 
