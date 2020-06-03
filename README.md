@@ -3,8 +3,6 @@
 First try developing a operational system, using C and Assembly.
 
 
-Until Now, all we can do on this OS, is run on grub and type something.
-
 ## Features till now:
 ```
 loader
@@ -12,6 +10,7 @@ linker
 kernel compiling
 interrupts handling
 keyboard handling
+mouse handling
 ```
 
 To start start from here, you'll need the tool kit for OS development, run:
