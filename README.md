@@ -1,6 +1,6 @@
 # RDOS - Rodrigo Operational System
 
-First try developing a operational system, using C and Assembly.
+First try developing an operational system, using C and Assembly.
 
 
 ## Features till now:
@@ -36,6 +36,6 @@ make clean
 
 References:
 
-[ittle Book of OS](https://littleosbook.github.io/)    
+[Little Book of OS](https://littleosbook.github.io/)    
 [OS DEV](https://wiki.osdev.org/Beginner_Mistakes)  
 [Little Book Of OS  GITHUB](https://littleosbook.github.io/#virtual-machine)
