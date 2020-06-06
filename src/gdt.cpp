@@ -7,7 +7,10 @@
  * @author Rodrigo Santiago
  * @date Mai 31 2020
  */
-#include "gdt.h"
+#include <gdt.h>
+
+using namespace rdos;
+using namespace rdos::common;
 
 GlobalDescriptorTable::GlobalDescriptorTable()
 : nullSegmentSelector(0,0,0),

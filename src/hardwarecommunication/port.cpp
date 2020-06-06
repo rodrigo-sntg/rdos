@@ -1,4 +1,7 @@
-#include "port.h"
+#include <hardwarecommunication/port.h>
+
+using namespace rdos::common;
+using namespace rdos::hardwarecommunication;
 
 Port::Port(uint16_t portnumber)
 {
