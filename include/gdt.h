@@ -2,7 +2,7 @@
  * HEADER FILE
  * Global Descriptor Table
  * 
- * This is a data structore from intel x86 processors which define
+ * This is a data structure from intel x86 processors which define
  * the characteristics of memory usage during the execution of the program.
  * 
  * @author Rodrigo Santiago

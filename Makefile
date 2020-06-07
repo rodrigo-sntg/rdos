@@ -1,3 +1,6 @@
+# sudo apt-get install g++ binutils libc6-dev-i386
+# sudo apt-get install VirtualBox grub-legacy xorriso
+
 GPPPARAMS = -m32 -Iinclude -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -Wno-write-strings
 ASPARAMS = --32	
 LDPARAMS = -melf_i386
@@ -8,8 +11,10 @@ objects = 	obj/loader.o \
 			obj/hardwarecommunication/port.o \
 			obj/hardwarecommunication/interruptstubs.o \
 			obj/hardwarecommunication/interrupts.o \
+			obj/hardwarecommunication/pci.o \
 			obj/drivers/keyboard.o \
 			obj/drivers/mouse.o \
+			obj/drivers/vga.o \
 			obj/kernel.o
 
 obj/%.o: src/%.cpp
