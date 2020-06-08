@@ -33,6 +33,8 @@ make clean
 
 
 
+`Since it is open source, you can help the project and make pull requests!`
+
 
 References:
 
