@@ -11,6 +11,8 @@ kernel compiling
 interrupts handling
 keyboard handling
 mouse handling
+PCI mapping
+GUI
 ```
 
 To start start from here, you'll need the tool kit for OS development, run:
