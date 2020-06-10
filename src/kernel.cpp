@@ -13,13 +13,15 @@
 #include <gui/window.h>
 #include <gui/render.h>
 
+#include <multitasking.h>
+
 using namespace rdos;
 using namespace rdos::common;
 using namespace rdos::drivers;
 using namespace rdos::hardwarecommunication;
 using namespace rdos::gui;
 
-#define GRAPHICSMODE
+// #define GRAPHICSMODE
 
 void printf(char* str){
     static uint16_t* VideoMemory = (uint16_t*)0xb8000;
@@ -124,6 +126,22 @@ public:
 
 
 
+void taskA()
+{
+    while(true)
+    {
+
+        printf("AA");
+    }
+}
+void taskB()
+{
+    while(true)
+    {
+
+        printf("BB");
+    }
+}
 typedef void (*constructor)();
 extern "C" constructor start_ctors;
 extern "C" constructor end_ctors;
@@ -138,16 +156,27 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
 
     GlobalDescriptorTable gdt;
     printf("> GDT created!\n");
+
+    TaskManager taskManager;
+    Task task1(&gdt, taskA);
+    Task task2(&gdt, taskB);
+    taskManager.AddTask(&task1);
+    taskManager.AddTask(&task2);
+
     
     printf("> Creating Interrupts...\n");
-    InterruptManager interrupts(0x20, &gdt);
+    InterruptManager interrupts(0x20, &gdt, &taskManager);
     printf("> Interrupts created!\n");
 
+    
+    #ifdef GRAPHICSMODE
+        Desktop desktop(320,200, 0x00,0x00,0xA8);
+    #endif
+    
     DriverManager driverManager;
     
     printf("> Initializing Drivers...\n");
-    Desktop desktop(320,200, 0x00,0x00,0xA8);
-    
+
     #ifdef GRAPHICSMODE
         KeyboardDriver keyboard(&interrupts, &desktop);
     #else
@@ -157,7 +186,6 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     driverManager.AddDriver(&keyboard);
     printf("> Keyboard driver created!\n");
 
-    MouseToConsole mouseHandler;
     
     #ifdef GRAPHICSMODE
         MouseDriver mouse(&interrupts, &desktop);
@@ -165,17 +193,21 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
         MouseToConsole mousehandler;
         MouseDriver mouse(&interrupts, &mousehandler);
     #endif
+    
     driverManager.AddDriver(&mouse);
     printf("> mouse driver created!\n");
 
+    
     PeripheralComponentInterconnectController PCIController;
     PCIController.SelectDrivers(&driverManager, &interrupts);
 
-    printf("> Instantiating Graphics!\n");
-    VideoGraphicsArray vga;
 
+    VideoGraphicsArray vga;
     //initialize render frame
+    #ifdef GRAPHICSMODE
+        printf("> Instantiating Graphics!\n");
         Render rend(320,200);   //arguments do nothing for now. 320,200 is hardcoded into "gui/render.h"
+    #endif
     
     driverManager.ActivateAll();
     printf("> Drivers activated!\n");
@@ -191,15 +223,9 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     interrupts.Activate();
     printf("> Clock interrupts activated.\n");
 
-    vga.SetMode(320,200,8);
-
-    // vga.FillRectangle(0,0,320,200,0x00,0x00,0xA8);
-    //make new window and attach it to the desktop
-    // Window win1(&desktop, 10,10, 20,20, 0xA8,0x00,0x00);
-    // desktop.AddChild(&win1);
-    // Window win2(&desktop, 40,15, 30,30, 0x00,0xA8,0x00);
-    // desktop.AddChild(&win2);
-    
+    #ifdef GRAPHICSMODE
+        vga.SetMode(320,200,8);
+    #endif
 
     while(1)
     {

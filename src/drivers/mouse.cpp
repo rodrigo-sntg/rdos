@@ -29,7 +29,7 @@ void MouseEventHandler::OnMouseMove(int x, int y)
 
 
 MouseDriver::MouseDriver(InterruptManager* manager, MouseEventHandler* handler)
-: InterruptHandler(0x2C, manager),
+: InterruptHandler(manager, 0x2C ),
 dataport(0x60),
 commandport(0x64)
 {

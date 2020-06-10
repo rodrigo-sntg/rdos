@@ -1,38 +1,48 @@
-/**
- * Interrupts Manager
- */
-
 #include <hardwarecommunication/interrupts.h>
-
+using namespace rdos;
 using namespace rdos::common;
 using namespace rdos::hardwarecommunication;
 
 
 void printf(char* str);
-void printfHex(uint8_t);
 void printHex(uint8_t);
 
-InterruptHandler::InterruptHandler(uint8_t interruptNumber, InterruptManager* interruptManager)
-{
-    this->interruptNumber = interruptNumber;
-    this->interruptManager = interruptManager;
-    interruptManager->handlers[interruptNumber] = this;
 
+
+
+
+InterruptHandler::InterruptHandler(InterruptManager* interruptManager, uint8_t InterruptNumber)
+{
+    this->InterruptNumber = InterruptNumber;
+    this->interruptManager = interruptManager;
+    interruptManager->handlers[InterruptNumber] = this;
 }
+
 InterruptHandler::~InterruptHandler()
 {
-    if(interruptManager->handlers[interruptNumber] == this)
-        interruptManager->handlers[interruptNumber] = 0;
+    if(interruptManager->handlers[InterruptNumber] == this)
+        interruptManager->handlers[InterruptNumber] = 0;
 }
+
 uint32_t InterruptHandler::HandleInterrupt(uint32_t esp)
 {
     return esp;
 }
 
 
-InterruptManager::GateDescriptor InterruptManager::interruptDescriptorTable[256];
 
+
+
+
+
+
+
+
+InterruptManager::GateDescriptor InterruptManager::interruptDescriptorTable[256];
 InterruptManager* InterruptManager::ActiveInterruptManager = 0;
+
+
+
 
 void InterruptManager::SetInterruptDescriptorTableEntry(uint8_t interrupt,
     uint16_t CodeSegment, void (*handler)(), uint8_t DescriptorPrivilegeLevel, uint8_t DescriptorType)
@@ -49,26 +59,24 @@ void InterruptManager::SetInterruptDescriptorTableEntry(uint8_t interrupt,
 }
 
 
-InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* globalDescriptorTable)
-    : picMasterCommandPort(0x20),
-      picMasterDataPort(0x21),
-      picSlaveCommandPort(0xA0),
-      picSlaveDataPort(0xA1)
+InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable* globalDescriptorTable, TaskManager* taskManager)
+    : programmableInterruptControllerMasterCommandPort(0x20),
+      programmableInterruptControllerMasterDataPort(0x21),
+      programmableInterruptControllerSlaveCommandPort(0xA0),
+      programmableInterruptControllerSlaveDataPort(0xA1)
 {
+    this->taskManager = taskManager;
     this->hardwareInterruptOffset = hardwareInterruptOffset;
-    // uint16_t hardwareInterruptOffset = this->hardwareInterruptOffset(); 
-
-    uint16_t CodeSegment = globalDescriptorTable->CodeSegmentSelector();
+    uint32_t CodeSegment = globalDescriptorTable->CodeSegmentSelector();
 
     const uint8_t IDT_INTERRUPT_GATE = 0xE;
     for(uint8_t i = 255; i > 0; --i)
     {
-
         SetInterruptDescriptorTableEntry(i, CodeSegment, &InterruptIgnore, 0, IDT_INTERRUPT_GATE);
         handlers[i] = 0;
     }
     SetInterruptDescriptorTableEntry(0, CodeSegment, &InterruptIgnore, 0, IDT_INTERRUPT_GATE);
-    //handlers[0] = 0;
+    handlers[0] = 0;
 
     SetInterruptDescriptorTableEntry(0x00, CodeSegment, &HandleException0x00, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x01, CodeSegment, &HandleException0x01, 0, IDT_INTERRUPT_GATE);
@@ -108,21 +116,21 @@ InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescr
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0E, CodeSegment, &HandleInterruptRequest0x0E, 0, IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0F, CodeSegment, &HandleInterruptRequest0x0F, 0, IDT_INTERRUPT_GATE);
 
-    picMasterCommandPort.Write(0x11);
-    picSlaveCommandPort.Write(0x11);
+    programmableInterruptControllerMasterCommandPort.Write(0x11);
+    programmableInterruptControllerSlaveCommandPort.Write(0x11);
 
     // remap
-    picMasterDataPort.Write(hardwareInterruptOffset);
-    picSlaveDataPort.Write(hardwareInterruptOffset+8);
+    programmableInterruptControllerMasterDataPort.Write(hardwareInterruptOffset);
+    programmableInterruptControllerSlaveDataPort.Write(hardwareInterruptOffset+8);
 
-    picMasterDataPort.Write(0x04);
-    picSlaveDataPort.Write(0x02);
+    programmableInterruptControllerMasterDataPort.Write(0x04);
+    programmableInterruptControllerSlaveDataPort.Write(0x02);
 
-    picMasterDataPort.Write(0x01);
-    picSlaveDataPort.Write(0x01);
+    programmableInterruptControllerMasterDataPort.Write(0x01);
+    programmableInterruptControllerSlaveDataPort.Write(0x01);
 
-    picMasterDataPort.Write(0x00);
-    picSlaveDataPort.Write(0x00);
+    programmableInterruptControllerMasterDataPort.Write(0x00);
+    programmableInterruptControllerSlaveDataPort.Write(0x00);
 
     InterruptDescriptorTablePointer idt_pointer;
     idt_pointer.size  = 256*sizeof(GateDescriptor) - 1;
@@ -132,7 +140,7 @@ InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescr
 
 InterruptManager::~InterruptManager()
 {
-    DeActivate();
+    Deactivate();
 }
 
 uint16_t InterruptManager::HardwareInterruptOffset()
@@ -143,47 +151,53 @@ uint16_t InterruptManager::HardwareInterruptOffset()
 void InterruptManager::Activate()
 {
     if(ActiveInterruptManager != 0)
-        ActiveInterruptManager->DeActivate();
+        ActiveInterruptManager->Deactivate();
+
     ActiveInterruptManager = this;
     asm("sti");
 }
 
-void InterruptManager::DeActivate()
+void InterruptManager::Deactivate()
 {
     if(ActiveInterruptManager == this)
     {
         ActiveInterruptManager = 0;
-        
-       asm("cli");
+        asm("cli");
     }
 }
 
-uint32_t InterruptManager::HandleInterrupt(uint8_t interruptNumber, uint32_t esp)
+uint32_t InterruptManager::HandleInterrupt(uint8_t interrupt, uint32_t esp)
 {
     if(ActiveInterruptManager != 0)
-        return ActiveInterruptManager->DoHandleInterrupt(interruptNumber, esp); 
-
+        return ActiveInterruptManager->DoHandleInterrupt(interrupt, esp);
     return esp;
 }
 
 
-uint32_t InterruptManager::DoHandleInterrupt(uint8_t interruptNumber, uint32_t esp)
+uint32_t InterruptManager::DoHandleInterrupt(uint8_t interrupt, uint32_t esp)
 {
-
-    if(handlers[interruptNumber] != 0){
-        esp = handlers[interruptNumber]->HandleInterrupt(esp);
-    }
-
-    else if(interruptNumber != 0x20){
-        printf("NAO TRATEI 0X00");
-        printHex(interruptNumber);
-    }
-
-    if(0x20 <= interruptNumber && interruptNumber < 0x30)
+    
+    if(handlers[interrupt] != 0)
     {
-        picMasterCommandPort.Write(0x20);
-        if(0x28 <= interruptNumber)
-            picSlaveCommandPort.Write(0x20);
+        esp = handlers[interrupt]->HandleInterrupt(esp);
+    }
+    else if(interrupt != hardwareInterruptOffset)
+    {
+        printf("Nao tratado ");
+        printHex(interrupt);
+    }
+    
+    if(interrupt == hardwareInterruptOffset)
+    {
+        esp = (uint32_t)taskManager->Schedule((CPUState*)esp);
+    }
+
+    // hardware interrupts must be acknowledged
+    if(hardwareInterruptOffset <= interrupt && interrupt < hardwareInterruptOffset+16)
+    {
+        programmableInterruptControllerMasterCommandPort.Write(0x20);
+        if(hardwareInterruptOffset + 8 <= interrupt)
+            programmableInterruptControllerSlaveCommandPort.Write(0x20);
     }
 
     return esp;

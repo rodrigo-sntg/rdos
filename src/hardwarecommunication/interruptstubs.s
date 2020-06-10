@@ -17,6 +17,7 @@ _ZN4rdos21hardwarecommunication16InterruptManager19HandleException\num\()Ev:
 .global _ZN4rdos21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev
 _ZN4rdos21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev:
     movb $\num + IRQ_BASE, (interruptnumber)
+    pushl $0
     jmp int_bottom
 .endm
 
@@ -89,7 +90,7 @@ int_bottom:
     pushl %esp
     push (interruptnumber)
     call _ZN4rdos21hardwarecommunication16InterruptManager15HandleInterruptEhj
-    add %esp, 6
+    
     mov %eax, %esp # den stack wechseln
 
     # restore registers
@@ -108,6 +109,7 @@ int_bottom:
     # pop %es
     # pop %ds
     # popa
+    add $4, %esp
 
 .global _ZN4rdos21hardwarecommunication16InterruptManager15InterruptIgnoreEv
 _ZN4rdos21hardwarecommunication16InterruptManager15InterruptIgnoreEv:

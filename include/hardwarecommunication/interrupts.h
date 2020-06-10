@@ -1,36 +1,39 @@
 #ifndef __RDOS__HARDWARECOMMUNICATION__INTERRUPTMANAGER_H
 #define __RDOS__HARDWARECOMMUNICATION__INTERRUPTMANAGER_H
 
-#include <common/types.h>
 #include <gdt.h>
+#include <multitasking.h>
+#include <common/types.h>
 #include <hardwarecommunication/port.h>
+
 
 namespace rdos
 {
     namespace hardwarecommunication
     {
+
         class InterruptManager;
 
         class InterruptHandler
         {
         protected:
-            rdos::common::uint8_t interruptNumber;
+            rdos::common::uint8_t InterruptNumber;
             InterruptManager* interruptManager;
-
-            InterruptHandler(rdos::common::uint8_t interruptNumber, InterruptManager* interruptManager);
+            InterruptHandler(InterruptManager* interruptManager, rdos::common::uint8_t InterruptNumber);
             ~InterruptHandler();
         public:
             virtual rdos::common::uint32_t HandleInterrupt(rdos::common::uint32_t esp);
-
         };
+
 
         class InterruptManager
         {
             friend class InterruptHandler;
             protected:
-            
+
                 static InterruptManager* ActiveInterruptManager;
                 InterruptHandler* handlers[256];
+                TaskManager *taskManager;
 
                 struct GateDescriptor
                 {
@@ -50,7 +53,6 @@ namespace rdos
                 } __attribute__((packed));
 
                 rdos::common::uint16_t hardwareInterruptOffset;
-                //static InterruptManager* ActiveInterruptManager;
                 static void SetInterruptDescriptorTableEntry(rdos::common::uint8_t interrupt,
                     rdos::common::uint16_t codeSegmentSelectorOffset, void (*handler)(),
                     rdos::common::uint8_t DescriptorPrivilegeLevel, rdos::common::uint8_t DescriptorType);
@@ -97,22 +99,22 @@ namespace rdos
                 static void HandleException0x12();
                 static void HandleException0x13();
 
-                static rdos::common::uint32_t HandleInterrupt(rdos::common::uint8_t interruptNumber, rdos::common::uint32_t esp);
-                rdos::common::uint32_t DoHandleInterrupt(rdos::common::uint8_t interruptNumber, rdos::common::uint32_t esp);
+                static rdos::common::uint32_t HandleInterrupt(rdos::common::uint8_t interrupt, rdos::common::uint32_t esp);
+                rdos::common::uint32_t DoHandleInterrupt(rdos::common::uint8_t interrupt, rdos::common::uint32_t esp);
 
-                Port8BitSlow picMasterCommandPort;
-                Port8BitSlow picMasterDataPort;
-                Port8BitSlow picSlaveCommandPort;
-                Port8BitSlow picSlaveDataPort;
+                Port8BitSlow programmableInterruptControllerMasterCommandPort;
+                Port8BitSlow programmableInterruptControllerMasterDataPort;
+                Port8BitSlow programmableInterruptControllerSlaveCommandPort;
+                Port8BitSlow programmableInterruptControllerSlaveDataPort;
 
             public:
-                InterruptManager(rdos::common::uint16_t hardwareInterruptOffset, rdos::GlobalDescriptorTable* globalDescriptorTable);
+                InterruptManager(rdos::common::uint16_t hardwareInterruptOffset, rdos::GlobalDescriptorTable* globalDescriptorTable, rdos::TaskManager* taskManager);
                 ~InterruptManager();
                 rdos::common::uint16_t HardwareInterruptOffset();
                 void Activate();
-                void DeActivate();
+                void Deactivate();
         };
-
+        
     }
 }
 
