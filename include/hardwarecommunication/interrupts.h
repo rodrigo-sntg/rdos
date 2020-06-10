@@ -5,6 +5,7 @@
 #include <multitasking.h>
 #include <common/types.h>
 #include <hardwarecommunication/port.h>
+#include <memorymanagement.h>
 
 
 namespace rdos

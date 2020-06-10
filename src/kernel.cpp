@@ -1,5 +1,6 @@
 #include <common/types.h>
 #include <gdt.h>
+#include <memorymanagement.h>
 
 #include <hardwarecommunication/interrupts.h>
 #include <hardwarecommunication/pci.h>
@@ -157,11 +158,32 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     GlobalDescriptorTable gdt;
     printf("> GDT created!\n");
 
+    uint32_t* memupper = (uint32_t*)(((size_t)multiboot_structure) + 8);
+    size_t heap = 10*1024*1024;
+    MemoryManager memoryManager(heap, (*memupper)*1024 - heap - 10*1024);
+
+    printf("heap: 0x");
+    printHex((heap >> 24) & 0xFF);
+    printHex((heap >> 16) & 0xFF);
+    printHex((heap >> 8 ) & 0xFF);
+    printHex((heap      ) & 0xFF);
+
+    void* allocated = memoryManager.malloc(1024);
+    printf("\nallocated: 0x");
+    printHex(((size_t)allocated >> 24) & 0xFF);
+    printHex(((size_t)allocated >> 16) & 0xFF);
+    printHex(((size_t)allocated >> 8 ) & 0xFF);
+    printHex(((size_t)allocated      ) & 0xFF);
+    printf("\n");
+
     TaskManager taskManager;
+
+    /*
     Task task1(&gdt, taskA);
     Task task2(&gdt, taskB);
     taskManager.AddTask(&task1);
     taskManager.AddTask(&task2);
+    */
 
     
     printf("> Creating Interrupts...\n");
