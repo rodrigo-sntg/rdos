@@ -70,6 +70,28 @@ void printHex(uint8_t key)
     printf(foo);
 }
 
+void printfHex(uint8_t key)
+{
+    char* foo = "00";
+    char* hex = "0123456789ABCDEF";
+    foo[0] = hex[(key >> 4) & 0x0F];
+    foo[1] = hex[key & 0x0F];
+    printf(foo);
+}
+
+void printfHex16(uint16_t key)
+{
+    printfHex((key >> 8) & 0xFF);
+    printfHex( key & 0xFF);
+}
+void printfHex32(uint32_t key)
+{
+    printfHex((key >> 24) & 0xFF);
+    printfHex((key >> 16) & 0xFF);
+    printfHex((key >> 8) & 0xFF);
+    printfHex( key & 0xFF);
+}
+
 class PrintfKeyboardEventHandler: public KeyboardEventHandler
 {
 public:

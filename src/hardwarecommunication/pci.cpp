@@ -1,4 +1,5 @@
 #include <hardwarecommunication/pci.h>
+#include <drivers/amd_am79c973.h>
 
 using namespace rdos::common;
 using namespace rdos::drivers;
@@ -80,10 +81,11 @@ void PeripheralComponentInterconnectController::SelectDrivers(rdos::drivers::Dri
                     if(bar.address && (bar.type == InputOutput))
                         dev.portBase = (uint32_t)bar.address;
                     
-                    Driver* driver = GetDriver(dev, interrupts);
-                    if(driver != 0 )
-                        driverManager->AddDriver(driver);
                 }
+                
+                Driver* driver = GetDriver(dev, interrupts);
+                if(driver != 0 )
+                    driverManager->AddDriver(driver);
 
                 printf("PCI BUS - ");
                 printHex(bus & 0xFF);
@@ -117,11 +119,11 @@ Driver* PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
             {
             case 0x2000: // am79c973
             
-                // driver = (amd_am79c973*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
-                // if(driver != NULL)
-                //     new (driver) amd_am79c973(...);
-                
+                driver = (amd_am79c973*)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
+                if(driver != 0)
+                    new (driver) amd_am79c973(&dev, interrupts);
                 printf("AMD am79c973 ");
+                return driver;
                 break;
             }
             break;
