@@ -21,11 +21,10 @@ namespace rdos
 
         class DriverManager
         {
-        private:
+        public:
             Driver* drivers[256];
             int numDrivers;
 
-        public:
             DriverManager();
             void AddDriver(Driver* drv);
 

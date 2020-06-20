@@ -10,6 +10,7 @@ namespace rdos
 {
     namespace drivers
     {
+    
         class MouseEventHandler
         {
         public:
@@ -20,7 +21,8 @@ namespace rdos
             virtual void OnMouseUp(rdos::common::uint8_t button);
             virtual void OnMouseMove(int x, int y);
         };
-
+        
+        
         class MouseDriver : public rdos::hardwarecommunication::InterruptHandler, public Driver
         {
             rdos::hardwarecommunication::Port8Bit dataport;
@@ -39,5 +41,5 @@ namespace rdos
 
     }
 }
-
+    
 #endif

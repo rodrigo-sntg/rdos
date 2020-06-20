@@ -3,12 +3,14 @@
 #include <memorymanagement.h>
 
 #include <hardwarecommunication/interrupts.h>
+#include <syscalls.h>
 #include <hardwarecommunication/pci.h>
 
 #include <drivers/driver.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/vga.h>
+#include <drivers/ata.h>
 
 #include <gui/desktop.h>
 #include <gui/window.h>
@@ -16,13 +18,23 @@
 
 #include <multitasking.h>
 
+#include <drivers/amd_am79c973.h>
+#include <net/etherframe.h>
+#include <net/arp.h>
+
 using namespace rdos;
 using namespace rdos::common;
 using namespace rdos::drivers;
 using namespace rdos::hardwarecommunication;
 using namespace rdos::gui;
+using namespace rdos::net;
 
 // #define GRAPHICSMODE
+
+void sysprintf(char* str)
+{
+    asm("int $0x80" : : "a" (4), "b" (str));
+}
 
 void printf(char* str){
     static uint16_t* VideoMemory = (uint16_t*)0xb8000;
@@ -154,7 +166,7 @@ void taskA()
     while(true)
     {
 
-        printf("AA");
+        sysprintf("AA");
     }
 }
 void taskB()
@@ -162,7 +174,7 @@ void taskB()
     while(true)
     {
 
-        printf("BB");
+        sysprintf("BB");
     }
 }
 typedef void (*constructor)();
@@ -178,25 +190,25 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     printf("Hey you!\n");
 
     GlobalDescriptorTable gdt;
-    printf("> GDT created!\n");
+    // printf("> GDT created!\n");
 
     uint32_t* memupper = (uint32_t*)(((size_t)multiboot_structure) + 8);
     size_t heap = 10*1024*1024;
     MemoryManager memoryManager(heap, (*memupper)*1024 - heap - 10*1024);
 
-    printf("heap: 0x");
+    // printf("heap: 0x");
     printHex((heap >> 24) & 0xFF);
     printHex((heap >> 16) & 0xFF);
     printHex((heap >> 8 ) & 0xFF);
     printHex((heap      ) & 0xFF);
 
     void* allocated = memoryManager.malloc(1024);
-    printf("\nallocated: 0x");
+    // printf("\nallocated: 0x");
     printHex(((size_t)allocated >> 24) & 0xFF);
     printHex(((size_t)allocated >> 16) & 0xFF);
     printHex(((size_t)allocated >> 8 ) & 0xFF);
     printHex(((size_t)allocated      ) & 0xFF);
-    printf("\n");
+    // printf("\n");
 
     TaskManager taskManager;
 
@@ -208,9 +220,10 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     */
 
     
-    printf("> Creating Interrupts...\n");
+    // printf("> Creating Interrupts...\n");
     InterruptManager interrupts(0x20, &gdt, &taskManager);
-    printf("> Interrupts created!\n");
+    SyscallHandler syscalls(&interrupts, 0x80);
+    // printf("> Interrupts created!\n");
 
     
     #ifdef GRAPHICSMODE
@@ -219,7 +232,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     
     DriverManager driverManager;
     
-    printf("> Initializing Drivers...\n");
+    // printf("> Initializing Drivers...\n");
 
     #ifdef GRAPHICSMODE
         KeyboardDriver keyboard(&interrupts, &desktop);
@@ -228,7 +241,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
         KeyboardDriver keyboard(&interrupts, &kbhandler);
     #endif
     driverManager.AddDriver(&keyboard);
-    printf("> Keyboard driver created!\n");
+    // printf("> Keyboard driver created!\n");
 
     
     #ifdef GRAPHICSMODE
@@ -239,14 +252,17 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     #endif
     
     driverManager.AddDriver(&mouse);
-    printf("> mouse driver created!\n");
+    // printf("> mouse driver created!\n");
 
     
     PeripheralComponentInterconnectController PCIController;
     PCIController.SelectDrivers(&driverManager, &interrupts);
 
 
-    VideoGraphicsArray vga;
+    // VideoGraphicsArray vga;
+     #ifdef GRAPHICSMODE
+            VideoGraphicsArray vga;
+    #endif
     //initialize render frame
     #ifdef GRAPHICSMODE
         printf("> Instantiating Graphics!\n");
@@ -254,7 +270,7 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
     #endif
     
     driverManager.ActivateAll();
-    printf("> Drivers activated!\n");
+    // printf("> Drivers activated!\n");
 
     #ifdef GRAPHICSMODE
         vga.SetMode(320,200,8);
@@ -264,7 +280,59 @@ extern "C" void kernelMain(const void* multiboot_structure, uint32_t /*magicnumb
         desktop.AddChild(&win2);
     #endif
 
+    printf("\nS-ATA primary master: ");
+    AdvancedTechnologyAttachment ata0m(true, 0x1F0);
+    ata0m.Identify();
+    
+    printf("\nS-ATA primary slave: ");
+    AdvancedTechnologyAttachment ata0s(false, 0x1F0);
+    ata0s.Identify();
+
+    char* buffer = "fuck";
+
+    ata0s.Write28(0, (uint8_t*)buffer, 4);
+    ata0s.Flush();
+    
+    ata0s.Read28(0, 25);
+    
+    // printf("\nS-ATA secondary master: ");
+    // AdvancedTechnologyAttachment ata1m(true, 0x170);
+    // ata1m.Identify();
+    
+    // printf("\nS-ATA secondary slave: ");
+    // AdvancedTechnologyAttachment ata1s(false, 0x170);
+    // ata1s.Identify();
+
+    // third: 0x1E8
+    // fourth: 0x168
+
+    // IP 10.0.2.15
+    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 = 15;
+    uint32_t ip_be = ((uint32_t)ip4 << 24)
+                | ((uint32_t)ip3 << 16)
+                | ((uint32_t)ip2 << 8)
+                | (uint32_t)ip1;
+
+    // IP 10.0.2.2
+    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
+    uint32_t gip_be = ((uint32_t)gip4 << 24)
+                   | ((uint32_t)gip3 << 16)
+                   | ((uint32_t)gip2 << 8)
+                   | (uint32_t)gip1;
+
+    amd_am79c973* eth0 = (amd_am79c973*)(driverManager.drivers[2]);
+
+    eth0->SetIPAddress(ip_be);
+
+    // eth0->Send((uint8_t*)"Hello Network\n", 13);
+    EtherFrameProvider etherframe(eth0);
+    AddressResolutionProtocol arp(&etherframe);    
+    // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t*)"FOO", 3);
+
+
     interrupts.Activate();
+    printf("\n\n\n\n\n\n\n\n");
+    arp.Resolve(gip_be);
     printf("> Clock interrupts activated.\n");
 
     #ifdef GRAPHICSMODE
